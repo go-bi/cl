@@ -119,7 +119,7 @@ func run(h host, cmd string) ([]byte, error) {
 			ssh.PublicKeys(signer),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         time.Duration(time.Second * 3),
+		Timeout:         time.Duration(time.Second * 60),
 	}
 
 	conn, err := ssh.Dial("tcp", h.addr, cfg)
