@@ -119,7 +119,7 @@ func run(h host, cmd string) ([]byte, error) {
 			ssh.PublicKeys(signer),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         time.Duration(time.Second * 60),
+		Timeout:         time.Duration(time.Second * 3),
 	}
 
 	conn, err := ssh.Dial("tcp", h.addr, cfg)
@@ -166,6 +166,8 @@ func main() {
 
 	defer f.Close()
 
+
+
 	cluster := unmarshal(f)
 
 	hosts, ok := cluster[os.Args[1]]
@@ -193,8 +195,8 @@ func main() {
 				errs <- err
 				return
 			}
-			log(h.user + "@" + h.addr + " " + h.identity)
-			out <- append([]byte("Host: " + h.addr + "\n"), b...)
+			log(h.user + "@" + h.addr + " " + h.identity + " " + string(b[:]))
+			out <- append([]byte("Host: " + h.user + "@" + h.addr + " " + h.identity + " "), b...)
 		}(h, cmd)
 	}
 
