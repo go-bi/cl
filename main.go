@@ -165,8 +165,20 @@ func main() {
 	}
 
 	defer f.Close()
-
-
+	breadline := bufio.NewReader(f)
+	saveHosts := ""
+	for {
+		line, _, err := breadline.ReadLine()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			fmt.Println("read err:", err)
+			os.Exit(-1)
+		}
+		saveHosts += string(line) + "\n"
+	}
+	f.Seek(0, 0)
 
 	cluster := unmarshal(f)
 
@@ -185,18 +197,27 @@ func main() {
 
 	for _, h := range hosts {
 		wg.Add(1)
-
 		go func(h host, cmd string) {
 			defer wg.Done()
-
 			b, err := run(h, cmd)
-
 			if err != nil {
 				errs <- err
 				return
 			}
-			log(h.user + "@" + h.addr + " " + h.identity + " " + string(b[:]))
-			out <- append([]byte("Host: " + h.user + "@" + h.addr + " " + h.identity + " "), b...)
+			outlog := h.user + "@" + h.addr + " " + h.identity
+
+			saveHosts = strings.Replace(saveHosts, outlog+"\n", "", -1)
+			saveHosts = strings.Replace(saveHosts, outlog, "", -1)
+			f, err := os.OpenFile("hosts", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			fmt.Fprintf(f, saveHosts)
+			f.Close()
+
+			log(h.user + "@" + h.addr + " " + h.identity + " " + strings.Replace(string(b[:]), "\n", "", -1))
+			out <- append([]byte("Host: "+h.addr+"\n"), b...)
 		}(h, cmd)
 	}
 
@@ -266,20 +287,20 @@ func main() {
 }
 
 func log(text string) {
-    f, err := os.OpenFile("succ.txt", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
-    _, err = fmt.Fprintln(f, text)
-    if err != nil {
-        fmt.Println(err)
-                f.Close()
-        return
-    }
-    err = f.Close()
-    if err != nil {
-        fmt.Println(err)
-        return
-    }
+	f, err := os.OpenFile("succ.txt", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	_, err = fmt.Fprintln(f, text)
+	if err != nil {
+		fmt.Println(err)
+		f.Close()
+		return
+	}
+	err = f.Close()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
